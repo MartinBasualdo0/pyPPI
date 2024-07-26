@@ -1,12 +1,12 @@
 from dotenv import dotenv_values
 import pandas as pd
-from .main import PPI
-from .components import urls
+from main import PPI
+from components import urls
+import os
 
-users = ["marti", "mbasualdo"]
-env_vars = dotenv_values("C:/Users/marti/OneDrive - Económicas - UBA/Documentos personales/apis_data/.env")
-ppi_user = env_vars["PPI_USER"]
-ppi_password = env_vars["PPI_PASS"]
+# Secrets from github actions
+ppi_user = os.getenv("PPI_USER")
+ppi_password = os.getenv("PPI_PASS")
 
 app = PPI(ppi_user, ppi_password)
 
@@ -55,4 +55,4 @@ previous_df = pd.read_csv("../data/intraday_data.csv")
 df = pd.concat([previous_df, new_df]).reset_index(drop=True)
 df = df.drop_duplicates()
 
-df.to_csv("../data/intraday_data.csv", index=False)
+# df.to_csv("../data/intraday_data.csv", index=False)

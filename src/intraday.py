@@ -55,4 +55,4 @@ previous_df = pd.read_csv("../data/intraday_data.csv")
 df = pd.concat([previous_df, new_df]).reset_index(drop=True)
 df = df.drop_duplicates()
 
-# df.to_csv("../data/intraday_data.csv", index=False)
+df.to_csv("../data/intraday_data.csv", index=False)

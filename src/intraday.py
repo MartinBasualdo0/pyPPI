@@ -51,7 +51,7 @@ df_intraday = pd.concat(dfs_intraday)
 df_other_than_fft = pd.concat(dfs_other_than_fft)
 new_df = df_other_than_fft[["id", "nombre", "ticker"]].merge(df_intraday, how="inner", left_on="id", right_on="item")
 
-previous_df = pd.read_csv("../data/intraday_data.csv")
+previous_df = pd.read_csv("./data/intraday_data.csv")
 df = pd.concat([previous_df, new_df]).reset_index(drop=True)
 df = df.drop_duplicates()
 

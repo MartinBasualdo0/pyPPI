@@ -1,9 +1,9 @@
 name: Run Intraday Script
 
-on: [push]
-  # schedule:
-  #   # Ejecutar todos los días hábiles a las 5 PM (UTC-3)
-  #   - cron: '0 20 * * 1-5'
+on: #[push]
+  schedule:
+    # Ejecutar todos los días hábiles a las 5 PM (UTC-3)
+    - cron: '0 20 * * 1-5'
     
 jobs:
   run-script:

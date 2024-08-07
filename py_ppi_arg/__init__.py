@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple
 import json
 
-from components import (
+from py_ppi_arg.src.components import (
     RestClient,
     ApiException,
     urls,

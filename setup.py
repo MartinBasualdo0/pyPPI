@@ -6,7 +6,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='pyppi',
-    version='0.0.1',
+    version='1.0.0',
     author='MartinBasualdo0',
     author_email='martin.basualdo@hotmail.com',
     description='WebScrap de PortfolioPersonal',

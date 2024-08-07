@@ -1,8 +1,6 @@
 name: Publish Python Package pyppi
 
-on:
-  release:
-    types: [published]
+on: push
 
 permissions:
   contents: read

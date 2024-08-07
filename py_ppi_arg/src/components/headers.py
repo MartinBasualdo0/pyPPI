@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import re
-import components.urls as urls
+import py_ppi_arg.src.components.urls as urls
 
 class clientKey:
     def __init__(self):

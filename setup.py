@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="py_ppi_arg",
-    version="0.1.2",
+    version="0.1.3",
     author="Martin Basualdo",
     author_email="martin.basualdo@hotmail.com",
     description="Python connector for PortfolioPersonals's Rest APIs.",

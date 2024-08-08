@@ -132,7 +132,7 @@ class PPI:
         
     def get_technical_data_bonds(self, settlement: Settlement, item_id: str):
         
-        """Takes a request to get instruments quote list information filtered by instrument type, operation type and settlement
+        """Takes a request to get techical data for a bond
         
         Args:
             settlement (str): Settlement for instrument

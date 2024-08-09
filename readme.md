@@ -6,7 +6,7 @@ py_ppi_arg is a Python library that enables interaction with PortfolioPersonal R
 
 ## Disclaimer
 
-py_ppi_arg is not owned by Cocos Capital, and the authors are not responsible for the use of this library.
+py_ppi_arg is not owned by Portfolio Personal, and the authors are not responsible for the use of this library.
 
 ## Installation
 
@@ -73,7 +73,7 @@ The library also provides enumerations to help developers avoid errors and impro
 Once the library has been installed, you can import and initialize it. The initialization sets the email and password. It then attempts to authenticate with the provided credentials. If the authentication fails, an `ApiException` is thrown.
 
 ```
-from pycocos import Cocos
+from py_ppi_arg import PPI
 
 app = PPI(email="sample@email.com", password="S4mp13.p4ssW0rd")
 ```

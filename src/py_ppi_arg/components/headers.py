@@ -34,7 +34,7 @@ class clientKey:
         return None
 
     def extract_client_keys(self, function_text):
-        pattern = re.compile(r'let\s+s="(\d+)",\s*r="(\w+)";')
+        pattern = re.compile(r'let\s+r="(\d+)",\s*s="(\w+)";')
         match = pattern.search(function_text)
         if match:
             authorized_client = match.group(1)

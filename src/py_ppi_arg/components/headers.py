@@ -54,9 +54,7 @@ class clientKey:
             js_file_content = self.fetch_js_file_content(js_file)
             if js_file_content:
                 function_text = self.find_client_key_function(js_file_content)
-                print("function: ", function_text)
                 if function_text:
                     client_keys = self.extract_client_keys(function_text)
-                    print(client_keys)
                     return client_keys
         print("Could not find the function where ClientKey is defined")

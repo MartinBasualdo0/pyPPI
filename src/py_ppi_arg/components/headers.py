@@ -34,7 +34,6 @@ class clientKey:
         match = pattern.search(js_file_content.text)
         if match:
             return match.group()
-        # print("Could not find the function where ClientKey is defined")
         return None
 
     def extract_client_keys(self, function_text):

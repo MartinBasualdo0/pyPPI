@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import re
 from . import urls
 
+
 class clientKey:
     def __init__(self):
         self.url = urls.account_url
@@ -16,17 +17,20 @@ class clientKey:
         soup = BeautifulSoup(response.text, 'html.parser')
         script_tags = soup.find_all('script')
         pattern = re.compile(r'/_next/static/chunks/.*\.js')
-        js_files = [tag['src'] for tag in script_tags if 'src' in tag.attrs and pattern.match(tag['src'])]
+        js_files = [tag['src']
+                    for tag in script_tags if 'src' in tag.attrs and pattern.match(tag['src'])]
         return js_files
 
     def fetch_js_file_content(self, js_file_url):
         response = requests.get(self.url + js_file_url)
         if response.status_code != 200:
-            print(f"Failed to fetch the JavaScript file: {response.status_code}")
+            print(f"Failed to fetch the JavaScript file: {
+                  response.status_code}")
         return response
 
     def find_client_key_function(self, js_file_content):
-        pattern = re.compile(r'function\(\w+,\s*\w+,\s*\w+\)\s*\{[^}]*ClientKey:\s*\w+[^}]*\}')
+        pattern = re.compile(
+            r'function\(\w+,\s*\w+,\s*\w+\)\s*\{[^}]*ClientKey:\s*\w+[^}]*\}')
         match = pattern.search(js_file_content.text)
         if match:
             return match.group()
@@ -34,8 +38,10 @@ class clientKey:
         return None
 
     def extract_client_keys(self, function_text):
-        pattern = re.compile(r'let\s+r="(\d+)",\s*s="(\w+)";')
+        pattern = re.compile(
+            r'let\s+i="(\d+)",\s*o="(\w+)";s\.Z\.defaults\.headers\.common=\{AuthorizedClient:i,\s*ClientKey:o\}')
         match = pattern.search(function_text)
+
         if match:
             authorized_client = match.group(1)
             client_key = match.group(2)
@@ -48,7 +54,9 @@ class clientKey:
             js_file_content = self.fetch_js_file_content(js_file)
             if js_file_content:
                 function_text = self.find_client_key_function(js_file_content)
+                print("function: ", function_text)
                 if function_text:
                     client_keys = self.extract_client_keys(function_text)
+                    print(client_keys)
                     return client_keys
         print("Could not find the function where ClientKey is defined")

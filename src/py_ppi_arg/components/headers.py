@@ -37,16 +37,21 @@ class clientKey:
         return None
 
     def extract_client_keys(self, function_text):
-        pattern = re.compile(
-            r'let\s+i="(\d+)",\s*o="(\w+)";s\.Z\.defaults\.headers\.common=\{AuthorizedClient:i,\s*ClientKey:o\}')
-        match = pattern.search(function_text)
+        patterns = [
+            re.compile(
+                r'let\s+i="(\d+)",\s*o="(\w+)";s\.Z\.defaults\.headers\.common=\{AuthorizedClient:i,\s*ClientKey:o\}'),
+            re.compile(
+                r'let\s+o="(\d+)",\s*s="(\w+)";r\.Z\.defaults\.headers\.common=\{AuthorizedClient:o,\s*ClientKey:s\}')
+        ]
 
-        if match:
-            authorized_client = match.group(1)
-            client_key = match.group(2)
-            return {"AuthorizedClient": authorized_client, "ClientKey": client_key}
-        else:
-            return {"AuthorizedClient": None, "ClientKey": None}
+        for pattern in patterns:
+            match = pattern.search(function_text)
+            if match:
+                authorized_client = match.group(1)
+                client_key = match.group(2)
+                return {"AuthorizedClient": authorized_client, "ClientKey": client_key}
+
+        raise ValueError("Could not find 'AuthorizedClient' or 'ClientKey' in the function text")
 
     def get_client_keys(self):
         for js_file in self.js_files:

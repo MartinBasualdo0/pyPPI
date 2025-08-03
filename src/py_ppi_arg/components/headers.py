@@ -37,21 +37,25 @@ class clientKey:
         return None
 
     def extract_client_keys(self, function_text):
-        patterns = [
-            re.compile(
-                r'let\s+i="(\d+)",\s*o="(\w+)";s\.Z\.defaults\.headers\.common=\{AuthorizedClient:i,\s*ClientKey:o\}'),
-            re.compile(
-                r'let\s+o="(\d+)",\s*s="(\w+)";r\.Z\.defaults\.headers\.common=\{AuthorizedClient:o,\s*ClientKey:s\}')
-        ]
+        let_match = re.search(r'let\s+([^;]+);', function_text)
+        if not let_match:
+            raise ValueError(f"No let assignment found in function text: {function_text}")
+        assigns = {}
+        for assign in let_match.group(1).split(','):
+            parts = assign.strip().split('=')
+            if len(parts) == 2:
+                var, val = parts
+                assigns[var.strip()] = val.strip().strip('"')
 
-        for pattern in patterns:
-            match = pattern.search(function_text)
-            if match:
-                authorized_client = match.group(1)
-                client_key = match.group(2)
+        header_match = re.search(r'headers\.common=\{AuthorizedClient:([a-zA-Z_]\w*),ClientKey:([a-zA-Z_]\w*)\}', function_text)
+        if header_match:
+            auth_var, key_var = header_match.groups()
+            authorized_client = assigns.get(auth_var)
+            client_key = assigns.get(key_var)
+            if authorized_client and client_key:
                 return {"AuthorizedClient": authorized_client, "ClientKey": client_key}
 
-        raise ValueError("Could not find 'AuthorizedClient' or 'ClientKey' in the function text")
+        raise ValueError(f"Could not find 'AuthorizedClient' or 'ClientKey' in the function text. Function text: {function_text}")
 
     def get_client_keys(self):
         for js_file in self.js_files:

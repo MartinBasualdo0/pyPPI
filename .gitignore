@@ -1,7 +1,34 @@
-/output
-/test
-/.venv
+# Environment / secrets
+.env
+.env.*
+.env*
+*.pem
+*.key
+.pypirc
+
+# Python
 *.pyc
+*.pyo
+__pycache__/
+*.egg-info/
+src/py_ppi_arg.egg-info/
+
+# Build / dist
 /dist
 /build
-src/py_ppi_arg.egg-info
+/output
+
+# Virtualenvs
+/.venv
+/venv
+/env
+
+# Local scratch / tests
+/test
+/tmp
+
+# IDE / OS / Tools
+.vscode/
+.idea/
+.DS_Store
+.claude/

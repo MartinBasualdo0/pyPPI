@@ -23,10 +23,26 @@ class RestClient:
             dict: Dict with token and user data
         """
         return self.api_request(
-            urls.endpoints["token"], method="post", 
+            urls.endpoints["token"], method="post",
             headers=headers,
             # params=params, #it does not need it apparently
             data=data
+        )
+
+    def validate_2fa(self, data: str, headers: dict[str, str]) -> Dict[str, Any]:
+        """Validates the 2FA code and returns the final access token.
+
+        Args:
+            data (str): JSON string with userId, codigo, recordar, twoFactType
+            headers (dict[str,str]): headers for the client that permits the request
+
+        Returns:
+            dict: Dict with the access token payload
+        """
+        return self.api_request(
+            urls.endpoints["validate_2fa"], method="post",
+            headers=headers,
+            data=data,
         )
     
     def get_client_id(self, headers: dict[str,Any]) -> Dict[str,Any]:
@@ -181,22 +197,24 @@ class RestClient:
             response = self.session.delete(
                 self._api_url(path), json=json_data, headers=headers
             )
-        if not response:
+        if response is None:
             raise ApiException("Bad HTTP API Response")
 
-        json_response = simplejson.loads(response.text)
-        
+        try:
+            json_response = simplejson.loads(response.text)
+        except simplejson.JSONDecodeError:
+            json_response = None
+
         if response.status_code == 401:
-            if retry:
-                self.api_request(path, retry=False)
-            else:
-                raise ApiException("Authentication Fails.")
+            raise ApiException(f"Authentication failed for {path}: {response.text[:200]}")
 
-        if response.status_code == 500:
-            raise ApiException(f"Error 500 {json_response}")
+        if response.status_code >= 500:
+            raise ApiException(f"Server error {response.status_code} on {path}: {json_response or response.text[:200]}")
 
-        if response.status_code == 200:
-            self._log_message(path, str(json_response))
+        if response.status_code >= 400:
+            raise ApiException(f"HTTP {response.status_code} on {path}: {json_response or response.text[:200]}")
+
+        self._log_message(path, str(json_response))
         return json_response
     
     # def update_session_headers(self, header_update: Dict[str, Any]) -> None:

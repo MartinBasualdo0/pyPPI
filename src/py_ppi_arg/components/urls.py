@@ -9,6 +9,7 @@ account_url = 'https://cuenta.portfoliopersonal.com'
 
 endpoints = {
     "token": "api/Seguridad/Auth/Login",
+    "validate_2fa": "api/Seguridad/Auth/ValidateUser2FA",
     "cuenta_ID": "/api/Cuenta/ComitentesAsignados",
     "refresh_token": "/api/Seguridad/Auth/RefreshToken",
     "ticker_search": "/api/Cotizaciones/Item/Search?q={}", #short ticker or id

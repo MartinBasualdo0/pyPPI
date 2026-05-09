@@ -1,5 +1,7 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
+import base64
 import json
+import warnings
 
 from .components import (
     RestClient,
@@ -13,8 +15,9 @@ from .components import (
 
 
 class PPI:
-    def __init__(self, user: str, password: str, 
-                #  gotrue_meta_security: Optional[Dict[str, Any]] = {}, api_key: Optional[str] = None
+    def __init__(self, user: str, password: str,
+                 otp_provider: Optional[Callable[[], str]] = None,
+                 remember_device: bool = False,
                  ) -> None:
         ## Parameters validation
         required_fields: list[tuple[str, Any, Any]]  = [
@@ -34,8 +37,10 @@ class PPI:
 
         ## Login Information
         self.user: str = user
-        self.password: str = password               
-        
+        self.password: str = password
+        self.otp_provider: Optional[Callable[[], str]] = otp_provider
+        self.remember_device: bool = remember_device
+
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0",
             "Content-Type": "application/json",
@@ -46,32 +51,96 @@ class PPI:
         ## Finally, tries to authenticate
         self._auth()
     def _auth(self) -> None:
-        
+
         """Calls the PPI API method to get an access token and updates the session headers.
 
         This method is responsible for authenticating the user by obtaining an access token from the PPI API.
         It then updates the session headers with the obtained token for subsequent API requests.
 
+        If the account has 2FA enabled, it will also call the 2FA validation endpoint using the OTP code
+        obtained from `otp_provider` (or `input()` as a fallback).
+
         Raises:
-            Exception: If there is an error during the authentication process.
-            Exception: If the access token is not found in the API response.
+            ApiException: If the credentials are invalid or the access token cannot be obtained.
         """
-        
+
         payload: str = json.dumps({"usuario": self.user, "clave": self.password})
-        # self.client.update_session_headers(self.headers)
-        # print(self.headers)
         response: Dict[str, Any] = self.client.get_token(data=payload, headers=self.headers)
-        # print(response)
+
         if response["status"] != 0:
-            raise Exception(f'Error: {response["message"]}')
+            raise ApiException(f'Login failed: {response.get("message")}')
 
-        if "accessToken" not in response["payload"]["token"]:
-            raise Exception("Error: Access token not found in the API response")
+        login_payload: Dict[str, Any] = response["payload"]
 
-        self.access_token = response["payload"]["token"]["accessToken"]
-        self.clientkey = response["payload"]["token"]["clienteID"]
+        if login_payload.get("twoFAInfo") and not login_payload.get("token"):
+            response = self._complete_2fa(login_payload)
+            if response["status"] != 0:
+                raise ApiException(f'2FA validation failed: {response.get("message")}')
+            login_payload = response["payload"]
+
+        token = login_payload.get("token")
+        if not token or "accessToken" not in token:
+            raise ApiException("Access token not found in the API response")
+
+        self.access_token = token["accessToken"]
+        self.clientkey = token["clienteID"]
         self._auth_phase_2()
-        self.clientID = self.client.get_client_id(self.headers)
+        self.clientID = self._resolve_client_id()
+
+    def _resolve_client_id(self) -> Optional[str]:
+        """Resolves the user's cuentaID for account-context endpoints.
+
+        Tries the legacy ComitentesAsignados endpoint first; if it fails
+        (PPI has restricted it for some accounts), falls back to extracting
+        `PPAuth.Claims.General.Cuentas` from the JWT.
+
+        Returns None if neither source yields a value — account-context
+        endpoints (e.g. get_tickers_list) won't work, but market-data
+        endpoints will.
+        """
+        try:
+            return self.client.get_client_id(self.headers)
+        except ApiException:
+            pass
+        try:
+            jwt_claims = self._decode_jwt_claims(self.access_token)
+            return jwt_claims.get("PPAuth.Claims.General.Cuentas")
+        except Exception:
+            warnings.warn(
+                "Could not resolve cuentaID. Account-context endpoints will not work, "
+                "but market-data endpoints (search_tickers, get_historic_data, etc.) will."
+            )
+            return None
+
+    @staticmethod
+    def _decode_jwt_claims(token: str) -> Dict[str, Any]:
+        payload_segment = token.split(".")[1]
+        padding = 4 - len(payload_segment) % 4
+        if padding < 4:
+            payload_segment += "=" * padding
+        return json.loads(base64.urlsafe_b64decode(payload_segment))
+
+    def _complete_2fa(self, login_payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Prompts for the OTP code and posts it to the 2FA validation endpoint.
+
+        Args:
+            login_payload: The `payload` object returned by the Login endpoint when 2FA is required.
+
+        Returns:
+            The full ValidateUser2FA response dict.
+        """
+        if self.otp_provider is not None:
+            code: str = self.otp_provider()
+        else:
+            code = input("Ingresá el código de 2FA enviado por PPI: ").strip()
+
+        body: str = json.dumps({
+            "userId": login_payload["usuario"]["id"],
+            "codigo": code,
+            "recordar": self.remember_device,
+            "twoFactType": login_payload["twoFAInfo"]["twoFactorType"],
+        })
+        return self.client.validate_2fa(data=body, headers=self.headers)
         
     def _auth_phase_2(self) -> None:
         

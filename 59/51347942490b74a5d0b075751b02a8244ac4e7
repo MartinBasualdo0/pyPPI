@@ -1,0 +1,19 @@
+setup.py
+  s_80b3964e470cf6::t_59737e11506073 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "5951347942490b74a5d0b075751b02a8244ac4e7",
+  "prompts": {},
+  "sessions": {
+    "s_80b3964e470cf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7b906b7e-3a86-460b-8bcd-890ecc0be034",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Martin Basualdo <martin.basualdo@hotmail.com>"
+    }
+  }
+}

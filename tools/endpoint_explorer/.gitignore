@@ -1,0 +1,4 @@
+captured_endpoints.db
+report.md
+__pycache__/
+*.pyc

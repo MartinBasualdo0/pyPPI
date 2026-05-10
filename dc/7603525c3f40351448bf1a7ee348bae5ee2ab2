@@ -1,0 +1,29 @@
+tools/endpoint_explorer/db.py
+  s_e5707df44e58de::t_d0c88e50112f35 1-129
+tools/endpoint_explorer/capture.py
+  s_e5707df44e58de::t_0edfb8927efde6 1-118
+tools/endpoint_explorer/.gitignore
+  s_e5707df44e58de::t_2acd82bc320e97 1-4
+tools/endpoint_explorer/report.py
+  s_e5707df44e58de::t_0ea6f26ddeb740 1-163
+tools/endpoint_explorer/requirements.txt
+  s_e5707df44e58de::t_0d35c3b2b9c543 1-2
+tools/endpoint_explorer/analyze.py
+  s_e5707df44e58de::t_13f1a8c46d7707 1-169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "dc7603525c3f40351448bf1a7ee348bae5ee2ab2",
+  "prompts": {},
+  "sessions": {
+    "s_e5707df44e58de": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "437edffd-4f15-4ecb-b56a-9a4d09a5c41e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Martin Basualdo <martin.basualdo@hotmail.com>"
+    }
+  }
+}

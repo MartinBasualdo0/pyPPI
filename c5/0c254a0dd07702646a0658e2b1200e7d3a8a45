@@ -1,0 +1,22 @@
+requirements.txt
+  s_1a4b520ee1dcfe::t_429ab4dcc9bcba 9
+  s_1a4b520ee1dcfe::t_d45960a4b4c9f8 6
+setup.py
+  s_1a4b520ee1dcfe::t_fc51ac57f425e8 18-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "c50c254a0dd07702646a0658e2b1200e7d3a8a45",
+  "prompts": {},
+  "sessions": {
+    "s_1a4b520ee1dcfe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9217050a-a2dc-472c-94cc-d470d748ccef",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Martin Basualdo <martin.basualdo@hotmail.com>"
+    }
+  }
+}

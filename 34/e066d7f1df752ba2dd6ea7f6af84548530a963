@@ -1,0 +1,33 @@
+docs/examples.md
+  s_1a4b520ee1dcfe::t_3c6e832cc8362b 1-117
+docs/installation.md
+  s_1a4b520ee1dcfe::t_9cc990f85644aa 1-32
+docs/quickstart.md
+  s_1a4b520ee1dcfe::t_50ea80762e713e 1-104
+docs/api-reference.md
+  s_1a4b520ee1dcfe::t_e78da42b7ea511 1-211
+docs/index.md
+  s_1a4b520ee1dcfe::t_a360acb56592c4 1-54
+mkdocs.yml
+  s_1a4b520ee1dcfe::t_063eff7dcf1cbd 1-49
+.github/workflows/docs.yml
+  s_1a4b520ee1dcfe::t_94898b4f3ceeab 1-25
+docs/authentication.md
+  s_1a4b520ee1dcfe::t_550998e04f2b8c 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "34e066d7f1df752ba2dd6ea7f6af84548530a963",
+  "prompts": {},
+  "sessions": {
+    "s_1a4b520ee1dcfe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9217050a-a2dc-472c-94cc-d470d748ccef",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Martin Basualdo <martin.basualdo@hotmail.com>"
+    }
+  }
+}

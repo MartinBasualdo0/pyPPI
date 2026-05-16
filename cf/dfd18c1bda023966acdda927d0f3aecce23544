@@ -1,0 +1,27 @@
+src/py_ppi_arg/components/client.py
+  s_1a4b520ee1dcfe::t_2a63cba5f6526e 33-41
+  s_1a4b520ee1dcfe::t_696574f78c8cbd 2
+docs/authentication.md
+  s_1a4b520ee1dcfe::t_03fe1cb5a4f267 23
+  s_1a4b520ee1dcfe::t_e95afc649c0e29 86
+  s_1a4b520ee1dcfe::t_5589b7c785d031 96
+  s_1a4b520ee1dcfe::t_86bd2cc10345a3 65-82,85,87-91
+src/py_ppi_arg/main.py
+  s_1a4b520ee1dcfe::t_c75c2bcd27d3eb 4-5,7,19-20,26,39,50-51,53-56,58-59,84-145,180,194-195,200-201,205-207,209,213,215,218-220,223-225
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "cfdfd18c1bda023966acdda927d0f3aecce23544",
+  "prompts": {},
+  "sessions": {
+    "s_1a4b520ee1dcfe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9217050a-a2dc-472c-94cc-d470d748ccef",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Martin Basualdo <martin.basualdo@hotmail.com>"
+    }
+  }
+}

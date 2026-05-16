@@ -1,0 +1,49 @@
+site_name: py_ppi_arg
+site_description: Python connector for Portfolio Personal (PPI) REST APIs
+site_url: https://martinbasualdo0.github.io/pyPPI
+repo_url: https://github.com/MartinBasualdo0/pyPPI
+repo_name: MartinBasualdo0/pyPPI
+
+theme:
+  name: material
+  language: es
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Cambiar a modo oscuro
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Cambiar a modo claro
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+
+nav:
+  - Inicio: index.md
+  - Guía de uso:
+      - Instalación: installation.md
+      - Autenticación: authentication.md
+      - Inicio rápido: quickstart.md
+      - Ejemplos: examples.md
+  - Referencia API: api-reference.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables

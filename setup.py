@@ -15,7 +15,8 @@ setuptools.setup(
     packages=setuptools.find_packages(where='src'),
     package_dir={'': 'src'},
     install_requires=[
-        'requests>=2.31.0',
+        'requests>=2.33.0',
+        'urllib3>=2.7.0',
         'simplejson>=3.19.1',
         'pyotp>=2.9.0',
         'cloudscraper>=1.2.71',

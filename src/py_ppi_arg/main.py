@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
 import base64
 import json
 import time
@@ -53,11 +53,20 @@ class PPI:
         Order of attempts:
         1. Valid cached access token (no network call needed)
         2. Cached refresh token (one network call, no 2FA)
-        3. Full login with user/password (may require 2FA)
+        3. Full login — cookies are restored first so PPI skips 2FA
+           if this device was previously marked as trusted via remember_device=True
         """
-        if self.cache_session and self._restore_from_cache():
+        cache = self._load_cache()
+
+        # Restore cookies before any login attempt so PPI recognizes the device
+        # and skips 2FA even on a full re-login
+        if cache:
+            self._apply_cached_cookies(cache)
+
+        if cache and self._restore_from_cache(cache):
             return
 
+        # Full login
         payload: str = json.dumps({"usuario": self.user, "clave": self.password})
         response: Dict[str, Any] = self.client.get_token(data=payload, headers=self.headers)
 
@@ -84,17 +93,27 @@ class PPI:
         if self.cache_session:
             self._save_session(token)
 
-    def _restore_from_cache(self) -> bool:
-        """Tries to restore a previous session from disk. Returns True if successful."""
-        if not _SESSION_FILE.exists():
-            return False
-        try:
-            cache = json.loads(_SESSION_FILE.read_text())
-        except Exception:
-            return False
+    # ------------------------------------------------------------------ cache
 
-        user_hash = hashlib.sha256(self.user.encode()).hexdigest()
-        if cache.get("user_hash") != user_hash:
+    def _load_cache(self) -> Optional[Dict]:
+        if not self.cache_session or not _SESSION_FILE.exists():
+            return None
+        try:
+            return json.loads(_SESSION_FILE.read_text())
+        except Exception:
+            return None
+
+    def _user_hash(self) -> str:
+        return hashlib.sha256(self.user.encode()).hexdigest()
+
+    def _apply_cached_cookies(self, cache: Dict) -> None:
+        if cache.get("user_hash") != self._user_hash():
+            return
+        for name, value in cache.get("cookies", {}).items():
+            self.client.session.cookies.set(name, value)
+
+    def _restore_from_cache(self, cache: Dict) -> bool:
+        if cache.get("user_hash") != self._user_hash():
             return False
 
         access_token = cache.get("access_token")
@@ -122,20 +141,14 @@ class PPI:
 
         return False
 
-    def _token_is_valid(self, token: str) -> bool:
-        try:
-            claims = self._decode_jwt_claims(token)
-            return claims.get("exp", 0) > time.time() + 60
-        except Exception:
-            return False
-
-    def _save_session(self, token: dict, client_id: Optional[str] = None) -> None:
+    def _save_session(self, token: Dict, client_id: Optional[str] = None) -> None:
         cache = {
-            "user_hash": hashlib.sha256(self.user.encode()).hexdigest(),
+            "user_hash": self._user_hash(),
             "access_token": self.access_token,
             "refresh_token": token.get("refreshToken"),
             "client_id": client_id if client_id is not None else self.clientID,
             "clientkey": self.clientkey,
+            "cookies": dict(self.client.session.cookies),
         }
         try:
             _SESSION_FILE.write_text(json.dumps(cache))
@@ -143,17 +156,16 @@ class PPI:
         except Exception:
             pass
 
+    def _token_is_valid(self, token: str) -> bool:
+        try:
+            claims = self._decode_jwt_claims(token)
+            return claims.get("exp", 0) > time.time() + 60
+        except Exception:
+            return False
+
+    # --------------------------------------------------------------- auth flow
+
     def _resolve_client_id(self) -> Optional[str]:
-        """Resolves the user's cuentaID for account-context endpoints.
-
-        Tries the legacy ComitentesAsignados endpoint first; if it fails
-        (PPI has restricted it for some accounts), falls back to extracting
-        `PPAuth.Claims.General.Cuentas` from the JWT.
-
-        Returns None if neither source yields a value — account-context
-        endpoints (e.g. get_tickers_list) won't work, but market-data
-        endpoints will.
-        """
         try:
             return self.client.get_client_id(self.headers)
         except ApiException:
@@ -177,7 +189,6 @@ class PPI:
         return json.loads(base64.urlsafe_b64decode(payload_segment))
 
     def _complete_2fa(self, login_payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Prompts for the OTP code and posts it to the 2FA validation endpoint."""
         if self.otp_provider is not None:
             code: str = self.otp_provider()
         else:
@@ -194,16 +205,18 @@ class PPI:
     def _auth_phase_2(self) -> None:
         self.headers.update({"authorization": f"bearer {self.access_token}"})
 
+    # ----------------------------------------------------------- public methods
+
     def get_tickers_list(self,
         instrument_type: InstrumentType,
         operation_type: OperationType,
-        settlement: Settlement) -> dict[str, Any]:
+        settlement: Settlement) -> Dict[str, Any]:
         """Retrieves instruments quote list filtered by instrument type, operation type and settlement."""
         return self.client.get_tickers_list(
             self.headers, self.clientID, instrument_type.value, operation_type.value, settlement.value
         )
 
-    def search_tickers(self, short_ticker: Optional[str] = None, item_id: Optional[str] = None) -> dict[str, any]:
+    def search_tickers(self, short_ticker: Optional[str] = None, item_id: Optional[str] = None) -> Dict[str, Any]:
         """Searches for an instrument by short ticker or internal item ID."""
         return self.client.search_tickers(
             headers=self.headers,
@@ -211,15 +224,15 @@ class PPI:
             item_id=item_id
         )
 
-    def get_technical_data_bonds(self, settlement: Settlement, item_id: str):
+    def get_technical_data_bonds(self, settlement: Settlement, item_id: str) -> Dict[str, Any]:
         """Retrieves technical data for a bond (TIR, duration, parity, etc.)."""
         return self.client.get_technical_data_bonds(self.headers, settlement.value, item_id)
 
     def get_historic_data(self, item_id: str, settlement: Settlement,
-                        date_from: Optional[str] = "", date_to: Optional[str] = "") -> dict[str, Any]:
+                        date_from: Optional[str] = "", date_to: Optional[str] = "") -> Dict[str, Any]:
         """Retrieves historical price data for an instrument."""
         return self.client.get_historic_data(self.headers, item_id, settlement.value, date_from, date_to)
 
-    def get_intraday_data(self, item_id: str, settlement: Settlement) -> dict[str, Any]:
+    def get_intraday_data(self, item_id: str, settlement: Settlement) -> Dict[str, Any]:
         """Retrieves intraday price data for an instrument."""
         return self.client.get_intraday_data(self.headers, item_id, settlement.value)

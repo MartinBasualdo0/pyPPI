@@ -1,0 +1,19 @@
+setup.py
+  s_1a4b520ee1dcfe::t_7583736bce2565 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "a2784ca244530938450c827136d2f89bf7702d9d",
+  "prompts": {},
+  "sessions": {
+    "s_1a4b520ee1dcfe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9217050a-a2dc-472c-94cc-d470d748ccef",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Martin Basualdo <martin.basualdo@hotmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+src/py_ppi_arg/main.py
+  s_1a4b520ee1dcfe::t_a718cb9ce38679 1,56-57,59-66,69,96-100,102,104,106-116,144,146,151,159-164,166,168,208-209,213,219,227,232,236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "2ea7125ae31817c61733837419b50c4c3fa34827",
+  "prompts": {},
+  "sessions": {
+    "s_1a4b520ee1dcfe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9217050a-a2dc-472c-94cc-d470d748ccef",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Martin Basualdo <martin.basualdo@hotmail.com>"
+    }
+  }
+}

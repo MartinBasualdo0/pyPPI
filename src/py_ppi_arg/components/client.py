@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Optional
+import json
 import requests
 import simplejson
 from datetime import datetime
@@ -27,6 +28,15 @@ class RestClient:
             headers=headers,
             # params=params, #it does not need it apparently
             data=data
+        )
+
+    def refresh_token(self, refresh_token: str, headers: dict[str, str]) -> Dict[str, Any]:
+        """Exchanges a refresh token for a new access token."""
+        data = json.dumps({"refreshToken": refresh_token})
+        return self.api_request(
+            urls.endpoints["refresh_token"], method="post",
+            headers=headers,
+            data=data,
         )
 
     def validate_2fa(self, data: str, headers: dict[str, str]) -> Dict[str, Any]:

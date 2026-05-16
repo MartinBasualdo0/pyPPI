@@ -20,7 +20,7 @@ Si tu cuenta tiene 2FA activado, PPI enviará un código a tu email al iniciar s
 
 Sin configurar nada extra, la librería pausará y pedirá el código por consola:
 
-```
+```text
 Ingresá el código de 2FA enviado por PPI: _
 ```
 
@@ -62,19 +62,38 @@ app = PPI(
 )
 ```
 
+## Caché de sesión
+
+Por defecto, la librería guarda el token en `~/.py_ppi_arg_session.json` después del primer login exitoso. En los siguientes usos:
+
+1. Si el token sigue vigente → lo reutiliza directamente (sin login, sin 2FA)
+2. Si venció pero hay refresh token → lo renueva silenciosamente (sin 2FA)
+3. Si el refresh también falló → hace login completo (puede pedir 2FA)
+
+El resultado es que el 2FA solo se pide la primera vez, o cuando la sesión expira completamente.
+
+Para desactivar el caché (útil en entornos CI o donde no se quiere estado en disco):
+
+```python
+app = PPI(user="tu@email.com", password="tu_contraseña", cache_session=False)
+```
+
+El archivo de caché tiene permisos `600` (solo lectura/escritura del usuario).
+
 ## Parámetros del constructor
 
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| `user` | `str` | Sí | Email de la cuenta PPI |
-| `password` | `str` | Sí | Contraseña de la cuenta |
-| `otp_provider` | `Callable[[], str]` | No | Función que retorna el código 2FA |
-| `remember_device` | `bool` | No (default `False`) | Recordar el dispositivo para saltear 2FA futuro |
+| Parámetro | Tipo | Requerido | Default | Descripción |
+| --------- | ---- | --------- | ------- | ----------- |
+| `user` | `str` | Sí | — | Email de la cuenta PPI |
+| `password` | `str` | Sí | — | Contraseña de la cuenta |
+| `otp_provider` | `Callable[[], str]` | No | `None` | Función que retorna el código 2FA |
+| `remember_device` | `bool` | No | `False` | Recordar el dispositivo para saltear 2FA futuro |
+| `cache_session` | `bool` | No | `True` | Guardar el token en disco para evitar 2FA en cada uso |
 
 ## Errores de autenticación
 
 | Error | Causa |
-|-------|-------|
+| ----- | ----- |
 | `ApiException: Login failed` | Credenciales incorrectas |
 | `ApiException: 2FA validation failed` | Código 2FA inválido o expirado |
 | `ApiException: Access token not found` | Respuesta inesperada del servidor |

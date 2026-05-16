@@ -1,7 +1,10 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import base64
 import json
+import time
+import hashlib
 import warnings
+from pathlib import Path
 
 from .components import (
     RestClient,
@@ -13,33 +16,27 @@ from .components import (
     OperationType
 )
 
+_SESSION_FILE = Path.home() / ".py_ppi_arg_session.json"
+
 
 class PPI:
     def __init__(self, user: str, password: str,
                  otp_provider: Optional[Callable[[], str]] = None,
                  remember_device: bool = False,
+                 cache_session: bool = True,
                  ) -> None:
-        ## Parameters validation
-        required_fields: list[tuple[str, Any, Any]]  = [
-            ("user", user, str),
-            ("password", password, str),
-        ]
-        # self._check_fields(required_fields)
-
-        ## REST Client
         self.client: RestClient = RestClient()
         self.clientKeyheader: clientKey = clientKey().get_client_keys()
 
-        ## Enums as instance variables
         self.instrument_types = InstrumentType
         self.settlements = Settlement
         self.operation_types = OperationType
 
-        ## Login Information
         self.user: str = user
         self.password: str = password
         self.otp_provider: Optional[Callable[[], str]] = otp_provider
         self.remember_device: bool = remember_device
+        self.cache_session: bool = cache_session
 
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0",
@@ -48,21 +45,18 @@ class PPI:
             "Authorizedclient": self.clientKeyheader["AuthorizedClient"],
         }
 
-        ## Finally, tries to authenticate
         self._auth()
+
     def _auth(self) -> None:
+        """Authenticates against PPI, reusing a cached session when possible.
 
-        """Calls the PPI API method to get an access token and updates the session headers.
-
-        This method is responsible for authenticating the user by obtaining an access token from the PPI API.
-        It then updates the session headers with the obtained token for subsequent API requests.
-
-        If the account has 2FA enabled, it will also call the 2FA validation endpoint using the OTP code
-        obtained from `otp_provider` (or `input()` as a fallback).
-
-        Raises:
-            ApiException: If the credentials are invalid or the access token cannot be obtained.
+        Order of attempts:
+        1. Valid cached access token (no network call needed)
+        2. Cached refresh token (one network call, no 2FA)
+        3. Full login with user/password (may require 2FA)
         """
+        if self.cache_session and self._restore_from_cache():
+            return
 
         payload: str = json.dumps({"usuario": self.user, "clave": self.password})
         response: Dict[str, Any] = self.client.get_token(data=payload, headers=self.headers)
@@ -86,6 +80,68 @@ class PPI:
         self.clientkey = token["clienteID"]
         self._auth_phase_2()
         self.clientID = self._resolve_client_id()
+
+        if self.cache_session:
+            self._save_session(token)
+
+    def _restore_from_cache(self) -> bool:
+        """Tries to restore a previous session from disk. Returns True if successful."""
+        if not _SESSION_FILE.exists():
+            return False
+        try:
+            cache = json.loads(_SESSION_FILE.read_text())
+        except Exception:
+            return False
+
+        user_hash = hashlib.sha256(self.user.encode()).hexdigest()
+        if cache.get("user_hash") != user_hash:
+            return False
+
+        access_token = cache.get("access_token")
+        if access_token and self._token_is_valid(access_token):
+            self.access_token = access_token
+            self.clientkey = cache.get("clientkey", "")
+            self.clientID = cache.get("client_id")
+            self._auth_phase_2()
+            return True
+
+        refresh_token = cache.get("refresh_token")
+        if refresh_token:
+            try:
+                response = self.client.refresh_token(refresh_token, self.headers)
+                token = response.get("payload", {}).get("token", {})
+                if token and "accessToken" in token:
+                    self.access_token = token["accessToken"]
+                    self.clientkey = token.get("clienteID", cache.get("clientkey", ""))
+                    self.clientID = cache.get("client_id")
+                    self._auth_phase_2()
+                    self._save_session(token, client_id=self.clientID)
+                    return True
+            except Exception:
+                pass
+
+        return False
+
+    def _token_is_valid(self, token: str) -> bool:
+        try:
+            claims = self._decode_jwt_claims(token)
+            return claims.get("exp", 0) > time.time() + 60
+        except Exception:
+            return False
+
+    def _save_session(self, token: dict, client_id: Optional[str] = None) -> None:
+        cache = {
+            "user_hash": hashlib.sha256(self.user.encode()).hexdigest(),
+            "access_token": self.access_token,
+            "refresh_token": token.get("refreshToken"),
+            "client_id": client_id if client_id is not None else self.clientID,
+            "clientkey": self.clientkey,
+        }
+        try:
+            _SESSION_FILE.write_text(json.dumps(cache))
+            _SESSION_FILE.chmod(0o600)
+        except Exception:
+            pass
 
     def _resolve_client_id(self) -> Optional[str]:
         """Resolves the user's cuentaID for account-context endpoints.
@@ -121,14 +177,7 @@ class PPI:
         return json.loads(base64.urlsafe_b64decode(payload_segment))
 
     def _complete_2fa(self, login_payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Prompts for the OTP code and posts it to the 2FA validation endpoint.
-
-        Args:
-            login_payload: The `payload` object returned by the Login endpoint when 2FA is required.
-
-        Returns:
-            The full ValidateUser2FA response dict.
-        """
+        """Prompts for the OTP code and posts it to the 2FA validation endpoint."""
         if self.otp_provider is not None:
             code: str = self.otp_provider()
         else:
@@ -141,106 +190,36 @@ class PPI:
             "twoFactType": login_payload["twoFAInfo"]["twoFactorType"],
         })
         return self.client.validate_2fa(data=body, headers=self.headers)
-        
+
     def _auth_phase_2(self) -> None:
-        
-        """Updates the session headers and performs additional steps after login.
+        self.headers.update({"authorization": f"bearer {self.access_token}"})
 
-        After successful login and obtaining the access token, this method is responsible for updating the session headers
-        with the necessary authentication information. It replicates the workflow of the web app.
-
-        """
-        
-        headers_update: dict[str, str] = {
-            "authorization": f"bearer {self.access_token}",
-        }
-        # print(headers_update)
-        self.headers.update(headers_update)
-    
     def get_tickers_list(self,
         instrument_type: InstrumentType,
         operation_type: OperationType,
-        settlement: Settlement) -> dict[str,Any]:
-        
-        """Takes a request to get instruments quote list information filtered by instrument type, operation type and settlement
-        
-        Args:
-            client_ID (str): string with client ID
-            instrument_type (str): InstrumentType of instrument
-            operation_type (str): OperationType for instrument
-            settlement (str): Settlement for instrument
-
-        Returns:
-            dict: Dict with the instruments information
-        """
-        
+        settlement: Settlement) -> dict[str, Any]:
+        """Retrieves instruments quote list filtered by instrument type, operation type and settlement."""
         return self.client.get_tickers_list(
             self.headers, self.clientID, instrument_type.value, operation_type.value, settlement.value
         )
-                
-    def search_tickers(self, short_ticker: Optional[str] = None, item_id: Optional[str] = None) -> dict[str,any]:
-        
-        """Makes a request to the api to get the information for a ticker
 
-        Args:
-            headers (dict[str,Any]): headers for the client that permits the request
-            short_ticker (str): String with the short_ticker. Example: "DNC3"
-            item_id (str). Example: "885981"
-
-        Returns:
-            dict: Dict with the instrument information
-            
-        Note:
-            Should look for the short ticker or for the item_id, not both
-        """
+    def search_tickers(self, short_ticker: Optional[str] = None, item_id: Optional[str] = None) -> dict[str, any]:
+        """Searches for an instrument by short ticker or internal item ID."""
         return self.client.search_tickers(
-            headers = self.headers,
+            headers=self.headers,
             short_ticker=short_ticker,
             item_id=item_id
         )
-        
+
     def get_technical_data_bonds(self, settlement: Settlement, item_id: str):
-        
-        """Takes a request to get techical data for a bond
-        
-        Args:
-            settlement (str): Settlement for instrument
-            item_id (str). Example: "885981"
-
-        Returns:
-            dict: Dict with the instruments information
-        """
-        
+        """Retrieves technical data for a bond (TIR, duration, parity, etc.)."""
         return self.client.get_technical_data_bonds(self.headers, settlement.value, item_id)
-    
-    def get_historic_data(self, item_id: str, settlement: Settlement, 
+
+    def get_historic_data(self, item_id: str, settlement: Settlement,
                         date_from: Optional[str] = "", date_to: Optional[str] = "") -> dict[str, Any]:
-        """Makes a request to the api to get the historic data for an item
-
-        Args:
-            headers (dict[str,Any]): headers for the client that permits the request
-            item_id (str). Example: "885981"
-            settlement (str, optional): Settlement of instrument
-            date_from (str, optional): Start date. Format yyyy-MM-dd
-            date_to (str, optional): End date. Format yyyy-MM-dd
-        Returns:
-            dict: Dict with the instrument historic information
-            
-        """
-
+        """Retrieves historical price data for an instrument."""
         return self.client.get_historic_data(self.headers, item_id, settlement.value, date_from, date_to)
-    
-    def get_intraday_data(self, item_id: str, settlement: Settlement, 
-                        ) -> dict[str, Any]:
-        """Makes a request to the api to get the intraday data for an item
 
-        Args:
-            headers (dict[str,Any]): headers for the client that permits the request
-            item_id (str). Example: "885981"
-            settlement (str, optional): Settlement of instrument
-        Returns:
-            dict: Dict with the instrument intraday information
-            
-        """
-
+    def get_intraday_data(self, item_id: str, settlement: Settlement) -> dict[str, Any]:
+        """Retrieves intraday price data for an instrument."""
         return self.client.get_intraday_data(self.headers, item_id, settlement.value)

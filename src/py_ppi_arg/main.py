@@ -1,5 +1,6 @@
 from typing import Any, Callable, Dict, List, Optional
 import base64
+import http.cookiejar as _cookiejar
 import json
 import time
 import hashlib
@@ -17,6 +18,44 @@ from .components import (
 )
 
 _SESSION_FILE = Path.home() / ".py_ppi_arg_session.json"
+
+
+def _serialize_cookies(jar) -> list:
+    """Serializa un CookieJar a una lista JSON-safe con dominio, path y expires."""
+    result = []
+    for c in jar:
+        result.append({
+            "name": c.name,
+            "value": c.value,
+            "domain": c.domain,
+            "path": c.path,
+            "expires": c.expires,
+            "secure": c.secure,
+            "rest": dict(c._rest) if hasattr(c, "_rest") else {},
+        })
+    return result
+
+
+def _restore_cookies(jar, cookies: list) -> None:
+    """Restaura cookies serializadas en un CookieJar con todos sus atributos."""
+    for c in cookies:
+        domain = c.get("domain", "")
+        jar.set_cookie(_cookiejar.Cookie(
+            version=0,
+            name=c["name"],
+            value=c["value"],
+            port=None, port_specified=False,
+            domain=domain,
+            domain_specified=bool(domain),
+            domain_initial_dot=domain.startswith("."),
+            path=c.get("path", "/"),
+            path_specified=bool(c.get("path")),
+            secure=c.get("secure", False),
+            expires=c.get("expires"),
+            discard=c.get("expires") is None,
+            comment=None, comment_url=None,
+            rest=c.get("rest", {}),
+        ))
 
 
 class PPI:
@@ -109,8 +148,13 @@ class PPI:
     def _apply_cached_cookies(self, cache: Dict) -> None:
         if cache.get("user_hash") != self._user_hash():
             return
-        for name, value in cache.get("cookies", {}).items():
-            self.client.session.cookies.set(name, value)
+        cookies = cache.get("cookies", {})
+        if isinstance(cookies, list):
+            _restore_cookies(self.client.session.cookies, cookies)
+        else:
+            # Formato legacy {name: value} — compatibilidad con cachés anteriores
+            for name, value in cookies.items():
+                self.client.session.cookies.set(name, value)
 
     def _restore_from_cache(self, cache: Dict) -> bool:
         if cache.get("user_hash") != self._user_hash():
@@ -148,7 +192,7 @@ class PPI:
             "refresh_token": token.get("refreshToken"),
             "client_id": client_id if client_id is not None else self.clientID,
             "clientkey": self.clientkey,
-            "cookies": dict(self.client.session.cookies),
+            "cookies": _serialize_cookies(self.client.session.cookies),
         }
         try:
             _SESSION_FILE.write_text(json.dumps(cache))

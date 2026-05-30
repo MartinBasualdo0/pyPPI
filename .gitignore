@@ -27,6 +27,9 @@ src/py_ppi_arg.egg-info/
 /test
 /tmp
 
+# Auth explorer output (sesiones capturadas y screenshots — contienen datos personales)
+tools/auth_explorer/output/
+
 # IDE / OS / Tools
 .vscode/
 .idea/
